@@ -13,6 +13,18 @@ export function Login(data){
 }
 
 /**
+ * 注册接口
+ */
+export function Register(data){
+    return service.request({
+        url: "/register/",
+        method: "post",
+        data, // 请求类型为 post 时
+        // params: data // 请求类型为 get 时
+    })
+}
+
+/**
  * 获取验证码
  */
 export function GetCode(data){

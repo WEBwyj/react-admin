@@ -1,22 +1,70 @@
 import React from 'react';
 //antd
-import { Form, Input, Button, Row, Col } from 'antd';
+import { Form, Input, Button, Row, Col,message } from 'antd';
 import { UserOutlined, UnlockOutlined } from '@ant-design/icons';
+//验证码组件
+import Code from "../../components/code/index";
+// 验证
+import { validate_pass } from "../../utils/validate";
+// API
+import { Register } from "../../api/account";
+//MD5加密
+import CryptoJs from 'crypto-js';
 
 class RegisterForm extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {};
+        this.state = {
+            username:"",
+            password:"",
+            code:"",
+            module:"register",
+        };
     }
     onFinish = (values) => {
-        console.log('Received values of form: ', values);
+        // console.log('Received values of form: ', values);
+        const requestData ={
+            username:this.state.username,
+            password:CryptoJs.MD5(this.state.password).toString(),
+            code:this.state.code
+        }
+        Register(requestData).then(response=>{
+            const data = response.data;
+            message.success(data.message)
+            if(data.resCode === 0){
+                this.toggleForm();
+            }
+        }).catch(error=>{
+            console.log(error)
+        })
     };
+
+    //input输入处理
+    inputChangeUsername=(e)=>{
+        let value = e.target.value;
+        this.setState({
+            username:value
+        })
+    }
+    inputChangePassword=(e)=>{
+        let value = e.target.value;
+        this.setState({
+            password:value
+        })
+    }
+    inputChangeCode=(e)=>{
+        let value = e.target.value;
+        this.setState({
+            code:value
+        })
+    }
 
     toggleForm = ()=>{
         this.props.switchForm("login");
     }
 
     render() {
+        const {username,module} =this.state;
         return (
             <div>
                 <div className="form-header">
@@ -28,36 +76,64 @@ class RegisterForm extends React.Component {
                         name="normal_login"
                         className="login-form"
                         initialValues={{ remember: true }}
-                        onFinish={() => this.onFinish}
+                        onFinish={this.onFinish}
                     >
                         <Form.Item
                             name="username"
-                            rules={[{ required: true, message: 'Please input your Username!' }]}
+                            rules={[
+                                { required: true, message: '邮箱不能为空!' },
+                                { type: "email", message: '邮箱格式不正确' },
+                        ]}
                         >
-                            <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Username" />
+                            <Input onChange={this.inputChangeUsername} prefix={<UserOutlined className="site-form-item-icon" />} placeholder="请输入邮箱" />
                         </Form.Item>
                         <Form.Item
                             name="password"
-                            rules={[{ required: true, message: 'Please input your password!' }]}
+                            rules={[
+                                { required: true, message: '密码不能为空!' },
+                                ({getFieldValue})=>({
+                                    validator(role,value){
+                                        let passwords_value = getFieldValue("passwords");
+                                        if (!validate_pass(value)) {
+                                            return Promise.reject("请输入大于6位小于20位数字+字母")
+                                        }
+                                        if(passwords_value && value !==passwords_value){
+                                            return Promise.reject("两次密码不一致")
+                                        }
+                                        return Promise.resolve();
+                                    }
+                                })
+                            ]}
                         >
-                            <Input prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="password" />
+                            <Input type="password" onChange={this.inputChangePassword} prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="请输入密码" />
                         </Form.Item>
                         <Form.Item
                             name="passwords"
-                            rules={[{ required: true, message: 'Please input your passwords!' }]}
+                            rules={[
+                                { required: true, message: '再次确认密码不能为空!' },
+                                ({getFieldValue})=>({
+                                    validator(role,value){
+                                        if (value !== getFieldValue("password")) {
+                                            return Promise.reject("两次密码不一致")
+                                        }
+                                        return Promise.resolve();
+                                    }
+                                })
+                            ]}
                         >
-                            <Input prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="passwords" />
+                            <Input type="password" prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="请再次输入密码" />
                         </Form.Item>
                         <Form.Item
                             name="code"
-                            rules={[{ required: true, message: 'Please input your code!' }]}
+                            rules={[{ required: true, message: '请输入6位验证码!',len:6 }]}
                         >
                             <Row gutter={13}>
                                 <Col span={15}>
-                                    <Input prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="code" />
+                                    <Input onChange={this.inputChangeCode} prefix={<UnlockOutlined className="site-form-item-icon" />} placeholder="请输入验证码" />
                                 </Col>
                                 <Col span={9}>
-                                    <Button type="danger">获取验证码</Button>
+                                    <Code username={username} module={module}></Code>
+                                    {/* <Button type="danger">获取验证码</Button> */}
                                 </Col>
                             </Row>
                         </Form.Item>
